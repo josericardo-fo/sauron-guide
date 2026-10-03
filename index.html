@@ -1,0 +1,378 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>Sauron: guia do beta</title>
+<script>
+  // aplica o tema antes do primeiro paint para não piscar
+  (function () {
+    var t;
+    try { t = localStorage.getItem("theme"); } catch (e) {}
+    if (t !== "light" && t !== "dark") t = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    document.documentElement.setAttribute("data-theme", t);
+  })();
+</script>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1f2328; --muted: #59636e; --border: #d8dee4;
+    --code-bg: #f3f4f6; --accent: #0a5fc2; --btn-bg: #ffffff;
+    --warn-bg: #fff8e5; --warn-bd: #c99a1c; --tip-bg: #eef5ff; --tip-bd: #3b7fe0;
+    color-scheme: light;
+  }
+  /* escuro só na tela: a impressão/PDF sai sempre no tema claro */
+  @media screen {
+    [data-theme="dark"] {
+      --bg: #0f1216; --fg: #e4e7eb; --muted: #9ba5b3; --border: #2b313a;
+      --code-bg: #181c22; --accent: #72b4ff; --btn-bg: #1c2129;
+      --warn-bg: #2a2412; --warn-bd: #c49a2e; --tip-bg: #12213a; --tip-bd: #4d8fe6;
+      color-scheme: dark;
+    }
+  }
+  * { box-sizing: border-box; }
+  html { font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: var(--bg); color: var(--fg); }
+  body { margin: 0; line-height: 1.6; font-size: 16px; }
+  a { color: var(--accent); }
+  code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  code { background: var(--code-bg); padding: 1px 5px; border-radius: 4px; font-size: 88%; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); padding: 12px 14px; border-radius: 8px; overflow-x: auto; margin: 10px 0; }
+  pre code { background: none; padding: 0; font-size: 14px; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .layout { max-width: 1040px; margin: 0 auto; padding: 32px 20px 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
+  main { min-width: 0; max-width: 720px; }
+  .page-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+  h1 { font-size: 30px; margin: 0; letter-spacing: -0.01em; }
+  h2 { font-size: 20px; margin: 36px 0 8px; padding-bottom: 6px; border-bottom: 1px solid var(--border); scroll-margin-top: 16px; }
+  h2 .anchor { margin-left: 8px; color: var(--muted); text-decoration: none; opacity: 0; font-weight: 400; }
+  h2:hover .anchor, h2 .anchor:focus-visible { opacity: 1; }
+  h3 { font-size: 16px; margin: 20px 0 4px; }
+  p { margin: 8px 0; }
+  ol, ul { padding-left: 22px; }
+  li { margin: 4px 0; }
+
+  .icon-btn, .copy { font: inherit; color: var(--fg); background: var(--btn-bg); border: 1px solid var(--border); border-radius: 6px; cursor: pointer; }
+  .icon-btn { width: 38px; height: 38px; display: inline-grid; place-items: center; flex: none; }
+  .icon-btn svg { width: 18px; height: 18px; }
+  [data-theme="dark"] .moon, [data-theme="light"] .sun { display: none; }
+  .copy { font-size: 12px; padding: 2px 8px; line-height: 1.6; }
+  .copy:hover, .icon-btn:hover { border-color: var(--muted); }
+  .code-wrap { position: relative; }
+  .code-wrap pre { padding-right: 80px; }
+  .code-wrap .copy { position: absolute; top: 8px; right: 8px; }
+
+  .toc details { font-size: 14px; border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; }
+  .toc summary { cursor: pointer; font-weight: 600; }
+  .toc ol { list-style: none; padding: 0; margin: 8px 0 0; }
+  .toc li { margin: 2px 0; }
+  .toc a { color: var(--muted); text-decoration: none; display: block; padding: 2px 0; }
+  .toc a:hover { color: var(--accent); }
+
+  .kit { margin: 20px 0 8px; padding: 16px; border: 1px solid var(--border); border-radius: 10px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
+  .kit p { margin: 2px 0 0; color: var(--muted); font-size: 14px; }
+  .btn { display: inline-block; padding: 8px 14px; border-radius: 8px; background: var(--accent); color: var(--bg); font-weight: 600; text-decoration: none; }
+  .btn:hover { filter: brightness(1.1); }
+
+  .callout { margin: 12px 0; padding: 10px 14px; border-left: 4px solid var(--tip-bd); background: var(--tip-bg); border-radius: 0 8px 8px 0; }
+  .callout.warn { border-left-color: var(--warn-bd); background: var(--warn-bg); }
+  .callout strong { display: block; font-size: 14px; }
+  .callout p { margin: 2px 0; }
+
+  table.cmds { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 15px; }
+  .cmds td { padding: 7px 8px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  .cmds td:first-child { white-space: nowrap; }
+  .cmds td:first-child .copy { margin-left: 8px; }
+  .cmds td:last-child { color: var(--muted); }
+
+  footer { max-width: 1040px; margin: 48px auto 0; padding: 20px; color: var(--muted); font-size: 14px; border-top: 1px solid var(--border); }
+
+  @media (min-width: 1000px) {
+    .layout { grid-template-columns: 210px minmax(0, 720px); gap: 48px; justify-content: center; }
+    .toc { grid-row: 1 / span 2; }
+    .toc details { position: sticky; top: 24px; max-height: calc(100vh - 48px); overflow-y: auto; border: 0; padding: 0; }
+    .toc summary { list-style: none; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; }
+    .toc summary::-webkit-details-marker { display: none; }
+  }
+  @media (max-width: 560px) {
+    /* botão acima do texto: comando longo não fica escondido sob ele */
+    .code-wrap pre { padding: 38px 14px 12px; }
+    .cmds tr, .cmds td { display: block; }
+    .cmds td { border: 0; padding: 2px 0; }
+    .cmds td:first-child { white-space: normal; padding-top: 8px; }
+    .cmds td:last-child { padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+  }
+  @media print {
+    @page { margin: 16mm 14mm; }
+    body { font-size: 11pt; }
+    .layout { display: block; padding: 0; max-width: none; }
+    main { max-width: none; }
+    .toc, .kit, .copy, .icon-btn, .anchor { display: none !important; }
+    .code-wrap pre { padding-right: 14px; }
+    a { color: inherit; text-decoration: none; }
+    h2 { break-after: avoid; margin-top: 24px; }
+    pre, table, tr, .callout, li { break-inside: avoid; }
+    footer { margin-top: 24px; padding: 8px 0 0; }
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+
+<nav class="toc" aria-label="Sumário">
+<details id="toc">
+<summary>Sumário</summary>
+<ol>
+  <li><a href="#acesso">Acesso</a></li>
+  <li><a href="#sessao-de-login">A sessão de login</a></li>
+  <li><a href="#levar-o-codigo">Levar o código</a></li>
+  <li><a href="#job-yaml">Escrever o job.yaml</a></li>
+  <li><a href="#imagem">Imagem e dependências</a></li>
+  <li><a href="#enviar-e-acompanhar">Enviar e acompanhar</a></li>
+  <li><a href="#vllm">vLLM</a></li>
+  <li><a href="#segredos">Segredos</a></li>
+  <li><a href="#telegram">Notificações no Telegram</a></li>
+  <li><a href="#feedback">Mandar feedback</a></li>
+  <li><a href="#armazenamento">Armazenamento e backup</a></li>
+  <li><a href="#boas-praticas">Boas práticas</a></li>
+  <li><a href="#ajuda">Ajuda</a></li>
+</ol>
+</details>
+</nav>
+
+<main>
+<header class="page-head">
+  <div>
+    <h1>Sauron</h1>
+  </div>
+  <button type="button" class="icon-btn" id="theme-toggle" aria-label="Alternar tema claro/escuro" hidden>
+    <svg class="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+    <svg class="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+  </button>
+</header>
+<p>O Sauron organiza a fila e a alocação de GPUs do cluster. Você leva seu código para a máquina, descreve o job num arquivo, e o Sauron roda seu container numa GPU livre e avisa quando termina.</p>
+
+<aside class="kit" aria-label="Kit para download">
+  <div>
+    <strong>Kit do beta</strong>
+    <p>Este guia em PDF, um <code>job.yaml</code> de exemplo, um <code>script.sauron</code> e o par <code>vllm.yaml</code> e <code>vllm.sauron</code>.</p>
+    <p>Avulsos: <a href="guia.pdf">guia.pdf</a> · <a href="job.yaml" download>job.yaml</a> · <a href="script.sauron" download>script.sauron</a> · <a href="vllm.yaml" download>vllm.yaml</a> · <a href="vllm.sauron" download>vllm.sauron</a></p>
+  </div>
+  <a class="btn" href="sauron-kit.zip" download>Baixar kit (.zip)</a>
+</aside>
+
+<h2 id="acesso">Acesso<a class="anchor" href="#acesso" aria-label="Link para esta seção">#</a></h2>
+<p>Entre por SSH com o seu usuário, no endereço que o administrador te enviou. A senha é a mesma que você já usa nas outras máquinas do laboratório:</p>
+<pre><code>ssh &lt;seu-usuario&gt;@&lt;endereço-do-login&gt;</code></pre>
+<p>Ao conectar você cai na sua sessão de login.</p>
+
+<h2 id="sessao-de-login">A sessão de login<a class="anchor" href="#sessao-de-login" aria-label="Link para esta seção">#</a></h2>
+<p>A sessão de login serve para preparar código, editar arquivos, enviar jobs e acompanhar resultados. Ela não tem GPU nem acesso a Docker ou <code>nvidia-smi</code>.</p>
+<div class="callout warn" role="note">
+  <strong>Atenção</strong>
+  <p>Não rode treinos, inferências, notebooks ou processos pesados na sessão de login. Todo processamento roda nas GPUs pelo <code>sauron submit</code>.</p>
+</div>
+
+<h2 id="levar-o-codigo">Levar o código<a class="anchor" href="#levar-o-codigo" aria-label="Link para esta seção">#</a></h2>
+<p>Na sessão de login, clone seu projeto numa subpasta de <code>~/workspace</code>, o disco rápido que o job enxerga. Não deixe código, dados ou modelos direto na home (<code>~</code>): ela é pequena e lenta.</p>
+<pre><code>cd ~/workspace
+git clone &lt;url-do-seu-repo&gt; meu-projeto</code></pre>
+
+<h2 id="job-yaml">Escrever o job.yaml<a class="anchor" href="#job-yaml" aria-label="Link para esta seção">#</a></h2>
+<p>Gere um <code>job.yaml</code> respondendo algumas perguntas:</p>
+<pre><code>sauron new</code></pre>
+<p>Um <code>job.yaml</code> típico:</p>
+<pre><code>name: meu-treino
+image: pytorch/pytorch:2.13.0-cuda13.0-cudnn9-devel
+gpus: 1
+vram: 80                   # VRAM minima por GPU, em GB
+max_time: 8h
+command: python train.py
+
+workspace: meu-projeto     # subpasta de ~/workspace; o job ja comeca dentro dela</code></pre>
+<p>Campos opcionais: <code>cpus</code>, <code>memory</code> (ex.: <code>8g</code>), <code>env</code> (só variáveis <em>não</em> secretas) e <code>volumes</code> (montar dados extras). Uma chave escrita errada gera erro no envio, então não passa em branco.</p>
+<p><code>vram</code> escolhe a classe de GPU pelo mínimo de VRAM, não uma fração. As classes disponíveis aparecem ao vivo no <code>sauron new</code> e no <code>sauron queue</code>: peça a menor que te atende.</p>
+
+<p>Vários jobs rodam na mesma máquina ao mesmo tempo e dividem a mesma RAM. <code>memory</code> é o teto de RAM do seu container. Se o job passar do teto, só ele é encerrado por falta de memória, não a máquina. Declare um valor realista com <code>memory:</code> (ex.: <code>16g</code>): pedir demais tira memória de quem também precisa, pedir de menos derruba o seu job.</p>
+
+<h2 id="imagem">Imagem e dependências<a class="anchor" href="#imagem" aria-label="Link para esta seção">#</a></h2>
+<p>O campo <code>image</code> diz em qual container o seu job roda. O Sauron baixa essa imagem pronta de um registry, como o Docker Hub ou o NGC da NVIDIA, e roda o seu comando dentro dela. Você não precisa de Dockerfile. Na primeira vez em que uma imagem é usada, a máquina baixa a imagem antes de começar o job; acompanhe o download pelo <code>sauron logs</code>.</p>
+<h3>Caminho recomendado: imagem pronta + suas dependências no script</h3>
+<p>Escolha uma imagem que já traga CUDA e o framework que você usa:</p>
+<pre><code>image: pytorch/pytorch:2.13.0-cuda13.0-cudnn9-devel</code></pre>
+<p>Instale o resto num venv, no início do job, pelo <code>script.sauron</code>:</p>
+<pre><code>set -e
+export PYTHONNOUSERSITE=1
+python -m venv --without-pip --system-site-packages .venv
+. .venv/bin/activate
+python -m pip install -r requirements.txt
+python train.py</code></pre>
+<p>Envie com <code>sauron submit -c job.yaml script.sauron</code>. O cache do pip fica guardado entre um job e outro, então a partir da segunda vez a instalação fica mais rápida.</p>
+<p>O venv fica na pasta do projeto, aproveita os pacotes que já vêm na imagem e vale para os próximos jobs. Para começar do zero, apague a pasta <code>.venv</code>.</p>
+<p>O <code>export PYTHONNOUSERSITE=1</code> impede que pacotes antigos de <code>~/workspace/.local</code> tomem o lugar dos pacotes do venv.</p>
+<h3>Imagem própria</h3>
+<p>Se o seu ambiente é grande ou demora para instalar, vale montar uma imagem própria a partir de uma das imagens acima:</p>
+<ol>
+  <li>Construa a imagem no seu computador ou em outra máquina com Docker.</li>
+  <li>Publique num registry público, como Docker Hub ou GitHub Container Registry.</li>
+  <li>Use o nome publicado no <code>job.yaml</code>, com uma versão fixa:</li>
+</ol>
+<pre><code>image: seu-usuario/meu-ambiente:v3</code></pre>
+<p>Use sempre uma versão fixa (<code>v1</code>, <code>v2</code>, <code>2026-09-25</code>) e troque o número a cada mudança. A máquina guarda a imagem depois do primeiro uso. Com um nome novo, você garante que o job vai rodar a versão que acabou de publicar.</p>
+
+<h2 id="enviar-e-acompanhar">Enviar e acompanhar<a class="anchor" href="#enviar-e-acompanhar" aria-label="Link para esta seção">#</a></h2>
+<table class="cmds">
+  <tr><td><code>sauron submit -f job.yaml</code></td><td>envia o job</td></tr>
+  <tr><td><code>sauron list</code></td><td>lista seus jobs mais recentes</td></tr>
+  <tr><td><code>sauron status</code></td><td>tempo de espera por tamanho de GPU</td></tr>
+  <tr><td><code>sauron status &lt;ref&gt;</code></td><td>estado do job e posição na fila</td></tr>
+  <tr><td><code>sauron logs &lt;ref&gt;</code></td><td>mostra os logs</td></tr>
+  <tr><td><code>sauron logs &lt;ref&gt; -f</code></td><td>acompanha os logs em tempo real, começando pelas últimas 100 linhas</td></tr>
+  <tr><td><code>sauron logs &lt;ref&gt; -n N</code></td><td>mostra só as últimas N linhas (<code>-n all</code> para tudo); combina com <code>-f</code></td></tr>
+  <tr><td><code>sauron queue</code></td><td>mostra a fila e a estimativa de espera</td></tr>
+</table>
+<p>A referência <code>&lt;ref&gt;</code> é o número do job, mostrado no <code>list</code>. Para controlar um job:</p>
+<table class="cmds">
+  <tr><td><code>sauron cancel &lt;ref&gt;</code></td><td>encerra dando tempo para finalizar</td></tr>
+  <tr><td><code>sauron kill &lt;ref&gt;</code></td><td>encerra na hora</td></tr>
+  <tr><td><code>sauron retry &lt;ref&gt;</code></td><td>recoloca na fila um job que falhou</td></tr>
+</table>
+<p>Para vários comandos, com <code>source</code>, pipes ou <code>&amp;&amp;</code>, coloque o corpo num arquivo <code>.sauron</code> e use um <code>job.yaml</code> sem a linha <code>command</code>:</p>
+<pre><code>sauron submit -c job.yaml script.sauron</code></pre>
+<h2 id="vllm">vLLM<a class="anchor" href="#vllm" aria-label="Link para esta seção">#</a></h2>
+<p>Para rodar modelos de linguagem com o vLLM, use a imagem oficial <code>vllm/vllm-openai</code>. Ela já traz o vLLM, o CUDA e o pacote <code>openai</code>. Baixe o <a href="vllm.yaml" download>vllm.yaml</a> e o <a href="vllm.sauron" download>vllm.sauron</a> para a pasta do projeto e envie com:</p>
+<pre><code>sauron submit -c vllm.yaml vllm.sauron</code></pre>
+<div class="callout" role="note">
+  <strong>Sempre com -c</strong>
+  <p>Com a imagem do vLLM, envie o job com <code>-c</code> e um arquivo <code>.sauron</code>, mesmo que seja um comando só.</p>
+</div>
+<h3>Gerar em lote</h3>
+<p>Para gerar respostas para muitos prompts de uma vez, chame o vLLM direto do seu código Python:</p>
+<pre><code>from vllm import LLM, SamplingParams
+
+llm = LLM("Qwen/Qwen2.5-7B-Instruct")
+prompts = ["Explique o que é uma GPU em uma frase.", "Dê um nome para um gato."]
+saidas = llm.generate(prompts, SamplingParams(max_tokens=100))
+for saida in saidas:
+    print(saida.outputs[0].text)</code></pre>
+<p>Nesse caso o <code>vllm.sauron</code> tem uma linha só: <code>python3 gerar.py</code>. Na imagem do vLLM o comando é <code>python3</code>.</p>
+<h3>Servidor e o seu código no mesmo job</h3>
+<p>Se o seu código conversa com uma API no formato da OpenAI, suba o servidor do vLLM no próprio job. O <code>vllm.sauron</code> do kit faz isso: sobe o servidor, espera o modelo carregar e roda o seu código. Se o servidor cair, o job mostra o motivo e encerra.</p>
+<pre><code>set -e
+
+MODEL=Qwen/Qwen2.5-7B-Instruct
+
+vllm serve "$MODEL" --port 8000 &gt; vllm.log 2&gt;&amp;1 &amp;
+servidor=$!
+trap 'kill $servidor 2&gt;/dev/null' EXIT
+
+until curl -sf localhost:8000/health &gt; /dev/null; do
+  kill -0 $servidor 2&gt;/dev/null || { tail -50 vllm.log; exit 1; }
+  sleep 5
+done
+
+python3 cliente.py</code></pre>
+<p>No seu código, aponte o cliente para <code>localhost:8000</code>:</p>
+<pre><code>from openai import OpenAI
+
+cliente = OpenAI(base_url="http://localhost:8000/v1", api_key="local")
+resposta = cliente.chat.completions.create(
+    model="Qwen/Qwen2.5-7B-Instruct",
+    messages=[{"role": "user", "content": "Explique o que é uma GPU em uma frase."}],
+)
+print(resposta.choices[0].message.content)</code></pre>
+<p>As mensagens do servidor ficam em <code>vllm.log</code>, na pasta do projeto.</p>
+
+<h2 id="segredos">Segredos<a class="anchor" href="#segredos" aria-label="Link para esta seção">#</a></h2>
+<div class="callout warn" role="note">
+  <strong>Segredos só no .env</strong>
+  <p>Segredos nunca vão no <code>job.yaml</code> nem no comando, o envio recusa tokens e chaves. Grave um arquivo <code>.env</code> na pasta do projeto e carregue dentro do job:</p>
+</div>
+<pre><code>source .env</code></pre>
+
+<h2 id="telegram">Notificações no Telegram<a class="anchor" href="#telegram" aria-label="Link para esta seção">#</a></h2>
+<p>Receba aviso quando o job começa, termina ou falha:</p>
+<pre><code>sauron telegram connect</code></pre>
+<p>Escaneie o QR que aparece no terminal (link válido por 15 min) e toque em START. O aviso de falha indica como ver o log. Confira o estado com <code>sauron telegram show</code>.</p>
+<p>Com o chat vinculado, mande <code>/status</code> pro bot para ver a disponibilidade do cluster na hora: o tempo de espera por tamanho de GPU. Com <code>/status 42</code> você vê o estado de um job seu, e <code>/jobs</code> lista seus jobs ativos e os últimos terminados.</p>
+<p>Mande <code>/logs</code> para ver o final do log do seu job (<code>/logs 42</code> escolhe o job). Com <code>/autologs</code> o log passa a vir dentro do próprio aviso de falha; mande de novo para desligar.</p>
+
+<h2 id="feedback">Mandar feedback<a class="anchor" href="#feedback" aria-label="Link para esta seção">#</a></h2>
+<p>Achou um problema ou tem uma sugestão? Fale com os mantenedores direto do terminal:</p>
+<pre><code>sauron feedback "sua mensagem"</code></pre>
+
+<h2 id="armazenamento">Armazenamento e backup<a class="anchor" href="#armazenamento" aria-label="Link para esta seção">#</a></h2>
+<p>Sua pasta na máquina é espaço de trabalho, não repositório permanente. Limpe com regularidade o que não usa mais: caches, arquivos temporários, checkpoints antigos e imagens de container.</p>
+<div class="callout warn" role="note">
+  <strong>Sem backup</strong>
+  <p>O cluster não faz backup automático, e uma falha de hardware pode levar tudo. Mantenha fora do cluster a cópia principal de código, datasets, checkpoints e resultados importantes.</p>
+</div>
+
+<h2 id="boas-praticas">Boas práticas<a class="anchor" href="#boas-praticas" aria-label="Link para esta seção">#</a></h2>
+<ul>
+  <li>Antes de um treino longo, envie uma versão curta (poucos passos, <code>max_time</code> de minutos). Erro de caminho, dependência ou memória aparece em minutos, não depois de horas na fila.</li>
+  <li>Peça a menor classe de <code>vram</code> que te atende. Classe menor costuma liberar antes, e o uso recente de GPU pesa no desempate da fila.</li>
+  <li>Dê folga ao <code>max_time</code>, mas sem exagero: o job é encerrado ao passar do limite, e o valor entra na estimativa de espera de todo mundo.</li>
+  <li>Salve checkpoints periodicamente. Se o job falhar ou estourar o tempo, o <code>sauron retry</code> recomeça do zero a não ser que seu código retome do último checkpoint.</li>
+</ul>
+
+<h2 id="ajuda">Ajuda<a class="anchor" href="#ajuda" aria-label="Link para esta seção">#</a></h2>
+<table class="cmds">
+  <tr><td><code>sauron guide</code></td><td>mostra o guia rápido no terminal</td></tr>
+  <tr><td><code>sauron --help</code></td><td>lista todos os comandos</td></tr>
+  <tr><td><code>sauron &lt;comando&gt; --help</code></td><td>ajuda de um comando</td></tr>
+</table>
+</main>
+</div>
+
+<footer>Atualizado em 03/10/2026</footer>
+
+<script>
+  (function () {
+    var root = document.documentElement;
+    var toggle = document.getElementById("theme-toggle");
+    toggle.hidden = false;
+    toggle.addEventListener("click", function () {
+      var t = root.getAttribute("data-theme") === "dark" ? "light" : "dark";
+      root.setAttribute("data-theme", t);
+      try { localStorage.setItem("theme", t); } catch (e) {}
+    });
+
+    // sumário aberto na lateral (tela larga), recolhido no topo (tela estreita)
+    var toc = document.getElementById("toc");
+    var wide = matchMedia("(min-width: 1000px)");
+    toc.open = wide.matches;
+    wide.addEventListener("change", function () { toc.open = wide.matches; });
+
+    function copyButton(text, label) {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.className = "copy";
+      b.textContent = "Copiar";
+      b.setAttribute("aria-label", label);
+      b.addEventListener("click", function () {
+        navigator.clipboard.writeText(text).then(function () {
+          b.textContent = "Copiado";
+        }, function () {
+          b.textContent = "Falhou";
+        });
+        setTimeout(function () { b.textContent = "Copiar"; }, 1500);
+      });
+      return b;
+    }
+
+    document.querySelectorAll("main pre").forEach(function (pre) {
+      var wrap = document.createElement("div");
+      wrap.className = "code-wrap";
+      pre.parentNode.insertBefore(wrap, pre);
+      wrap.appendChild(pre);
+      wrap.appendChild(copyButton(pre.textContent, "Copiar bloco de código"));
+    });
+    document.querySelectorAll(".cmds td:first-child").forEach(function (td) {
+      var cmd = td.textContent;
+      td.appendChild(copyButton(cmd, "Copiar comando: " + cmd));
+    });
+  })();
+</script>
+</body>
+</html>

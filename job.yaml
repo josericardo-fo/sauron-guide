@@ -1,0 +1,20 @@
+# Exemplo de job do Sauron. Envie com: sauron submit -f job.yaml
+# Para usar o corpo do script.sauron (sauron submit -c job.yaml script.sauron),
+# comente a linha command abaixo: no modo -c o comando vem do .sauron.
+name: meu-treino
+image: pytorch/pytorch:2.13.0-cuda13.0-cudnn9-devel
+gpus: 1
+vram: 80
+max_time: 8h
+command: python train.py
+
+# workspace: subpasta de ~/workspace com o seu codigo; o job ja comeca dentro dela
+workspace: meu-projeto
+
+# variaveis NAO secretas (ficam em claro)
+# env:
+#   MINHA_VAR: valor
+
+# montar dados extras (origem sob a sua pasta ou o cache)
+# volumes:
+#   - /caminho/na/maquina:/workspace/dados:ro

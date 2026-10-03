@@ -1,0 +1,17 @@
+# Corpo de um job em bash: este arquivo vira o comando do job. Rode com:
+#   sauron submit -c job.yaml script.sauron
+# No modo -c o job.yaml vai SEM a linha command, então comente a do job.yaml ao lado,
+# que está montado para o modo -f.
+
+set -e
+
+# segredos ficam num .env na pasta do projeto, nunca no job.yaml
+source .env 2>/dev/null || true
+
+# dependências num venv na pasta do projeto, sobre os pacotes da imagem
+export PYTHONNOUSERSITE=1
+python -m venv --without-pip --system-site-packages .venv
+. .venv/bin/activate
+python -m pip install -r requirements.txt
+
+python train.py --epochs 50
