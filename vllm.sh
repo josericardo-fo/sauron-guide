@@ -1,0 +1,20 @@
+#!/bin/bash
+# Servidor vLLM e o seu código no mesmo job. Rode com:
+#   sauron submit -c vllm.yaml vllm.sh
+
+set -e
+
+MODEL=Qwen/Qwen2.5-7B-Instruct
+
+# sobe o servidor em segundo plano; as mensagens dele vão para vllm.log
+vllm serve "$MODEL" --port 8000 > vllm.log 2>&1 &
+servidor=$!
+trap 'kill $servidor 2>/dev/null' EXIT
+
+# espera o modelo carregar; se o servidor cair, mostra o motivo e encerra
+until curl -sf localhost:8000/health > /dev/null; do
+  kill -0 $servidor 2>/dev/null || { tail -50 vllm.log; exit 1; }
+  sleep 5
+done
+
+python3 cliente.py

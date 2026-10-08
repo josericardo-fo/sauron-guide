@@ -1,0 +1,18 @@
+# Parâmetros do job. Envie com: sauron submit -c job.yaml script.sh
+# Os comandos do job ficam no script.sh, não aqui.
+name: meu-treino
+image: pytorch/pytorch:2.13.0-cuda13.0-cudnn9-devel
+gpus: 1
+vram: 80
+max_time: 8h
+
+# workspace: subpasta de ~/workspace com o seu código; o job já começa dentro dela
+workspace: meu-projeto
+
+# variáveis NÃO secretas (ficam em claro)
+# env:
+#   MINHA_VAR: valor
+
+# montar dados extras (origem sob a sua pasta ou o cache)
+# volumes:
+#   - /caminho/na/maquina:/workspace/dados:ro
