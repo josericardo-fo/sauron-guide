@@ -1,0 +1,10 @@
+# Job de vLLM. Envie com: sauron submit -c vllm.yaml vllm.sh
+# Com a imagem do vLLM use sempre o -c: o comando vem do vllm.sh.
+name: meu-vllm
+image: vllm/vllm-openai:v0.29.0
+gpus: 1
+vram: 80
+max_time: 2h
+
+# workspace: subpasta de ~/workspace com o seu código; o job já começa dentro dela
+workspace: meu-projeto
